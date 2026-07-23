@@ -40,7 +40,7 @@ public class SendgoConfig {
     public static Builder builder() { return new Builder(); }
 
     public static class Builder {
-        private String baseUrl        = "https://api.sendgo.io";
+        private String baseUrl        = "https://sendgo.io";
         private String accessKey;
         private String secretKey;
         private String kakaoSenderKey;
