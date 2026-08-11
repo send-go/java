@@ -23,14 +23,19 @@ public class SmsService {
         this.config = config;
     }
 
-    /** SMS 전송 (90자 이하) */
-    public Map<String, Object> sendSms(SmsRequest request) { return send(request); }
+    /**
+     * SMS 전송 (90바이트 이하).
+     *
+     * 요청의 messageType 을 {@code SMS} 로 강제한다. 이 메서드로 보냈는데
+     * {@code SmsRequest.lms()} 로 만든 요청이라 LMS 로 나가는 일이 없도록 하기 위함이다.
+     */
+    public Map<String, Object> sendSms(SmsRequest request) { return send(request.messageType("SMS")); }
 
-    /** LMS 전송 (장문) */
-    public Map<String, Object> sendLms(SmsRequest request) { return send(request); }
+    /** LMS 전송 (장문, 2,000바이트 이하). 요청의 messageType 을 {@code LMS} 로 강제한다. */
+    public Map<String, Object> sendLms(SmsRequest request) { return send(request.messageType("LMS")); }
 
-    /** MMS 전송 (멀티미디어) */
-    public Map<String, Object> sendMms(SmsRequest request) { return send(request); }
+    /** MMS 전송 (멀티미디어). 요청의 messageType 을 {@code MMS} 로 강제한다. */
+    public Map<String, Object> sendMms(SmsRequest request) { return send(request.messageType("MMS")); }
 
     public Map<String, Object> send(SmsRequest request) {
         Map<String, Object> body = new LinkedHashMap<>();

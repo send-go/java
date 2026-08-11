@@ -27,20 +27,37 @@ class SendgoHttpClient {
     }
 
     Map<String, Object> post(String url, Object body) {
-        return doPost(url, body, false);
+        return request("POST", url, body, false);
     }
 
-    private Map<String, Object> doPost(String url, Object body, boolean isRetry) {
-        try {
-            String json    = mapper.writeValueAsString(body);
-            String bearer  = makeBearerAuth(tokenManager.getToken());
+    /** GET without a request body — used by the campaign lookup endpoints. */
+    Map<String, Object> get(String url) {
+        return request("GET", url, null, false);
+    }
 
-            HttpRequest req = HttpRequest.newBuilder()
+    /** DELETE without a request body — used to stop a short URL redirecting. */
+    Map<String, Object> delete(String url) {
+        return request("DELETE", url, null, false);
+    }
+
+    private Map<String, Object> request(String method, String url, Object body, boolean isRetry) {
+        try {
+            String bearer = makeBearerAuth(tokenManager.getToken());
+
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(url))
-                    .header("Content-Type", "application/json")
-                    .header("Authorization", bearer)
-                    .POST(HttpRequest.BodyPublishers.ofString(json))
-                    .build();
+                    .header("Authorization", bearer);
+
+            // `method` used to be ignored here — the verb was inferred from whether a
+            // body was present, so DELETE could not be expressed at all.
+            if (body == null) {
+                builder.method(method, HttpRequest.BodyPublishers.noBody());
+            } else {
+                builder.header("Content-Type", "application/json")
+                        .method(method, HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body)));
+            }
+
+            HttpRequest req = builder.build();
 
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             Map<String, Object> result = mapper.readValue(resp.body(), new TypeReference<>() {});
@@ -51,7 +68,7 @@ class SendgoHttpClient {
 
                 if (!isRetry && tokenManager.shouldRefresh(resp.statusCode(), errorCode)) {
                     tokenManager.invalidate();
-                    return doPost(url, body, true);
+                    return request(method, url, body, true);
                 }
 
                 String msg = result.containsKey("message") ? (String) result.get("message") : "Unknown error";

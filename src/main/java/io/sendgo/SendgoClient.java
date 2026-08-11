@@ -27,6 +27,8 @@ public class SendgoClient {
 
     private final AlimtalkService   alimtalkService;
     private final FriendtalkService friendtalkService;
+    private final BrandMessageService brandMessageService;
+    private final ShortUrlService  shortUrlService;
     private final SmsService        smsService;
 
     public SendgoClient(SendgoConfig config) {
@@ -40,6 +42,8 @@ public class SendgoClient {
 
         this.alimtalkService   = new AlimtalkService(http, config);
         this.friendtalkService = new FriendtalkService(http, config);
+        this.brandMessageService = new BrandMessageService(http, config);
+        this.shortUrlService  = new ShortUrlService(http, config);
         this.smsService        = new SmsService(http, config);
 
         // 초기 토큰 발급
@@ -52,6 +56,12 @@ public class SendgoClient {
     /** 카카오 친구톡 서비스 */
     public FriendtalkService friendtalk() { return friendtalkService; }
 
+    /** 카카오 브랜드메시지 — 친구톡의 후속 채널. v2 전용. */
+    public BrandMessageService brandMessage() { return brandMessageService; }
+
     /** SMS / LMS / MMS 서비스 */
+    /** 짧은 URL — 링크 단축과 클릭 반응 분석. v2 전용. */
+    public ShortUrlService shortUrl() { return shortUrlService; }
+
     public SmsService sms() { return smsService; }
 }

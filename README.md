@@ -20,14 +20,14 @@ Spring Boot 프로젝트라면 [`sendgo-spring`](https://github.com/send-go/spri
 <dependency>
     <groupId>io.sendgo</groupId>
     <artifactId>sendgo-java</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'io.sendgo:sendgo-java:1.0.0'
+implementation 'io.sendgo:sendgo-java:1.1.0'
 ```
 
 ---
@@ -120,6 +120,45 @@ sendgo.friendtalk().send(FriendtalkRequest.builder()
     .imageLink("https://example.com/event")
     .contacts(List.of(Contact.builder().contact("01012345678").build()))
     .build());
+```
+
+---
+
+## 브랜드메시지 사용법
+
+브랜드메시지는 친구톡의 후속 채널입니다. 메시지 타입이 친구톡과 1:1 대응되며
+(`FT`→`BT`, `FI`→`BI`, `FW`→`BW`, `FL`→`BL`, `FC`→`BC`, `FM`→`BM`, `FP`→`BP`, `FA`→`BA`),
+요청에는 **친구톡 코드를 그대로** 넘기고 변환은 서버가 처리합니다.
+
+친구톡과 달리 다음이 가능합니다.
+
+- 채널 친구가 **아닌** 수신자에게 발송 (`targeting: N`)
+- 수신 동의한 **전체 채널 친구 동보** 발송 (`targeting: F`, 수신자 목록 불필요)
+- 리스트·캐러셀·커머스·동영상 등 **템플릿 기반 리치 메시지**
+
+> v2 전용입니다. `FT`/`FI`/`FW`를 채널 친구에게만 보낼 때는 친구톡 API가 더 간단합니다.
+
+```java
+import io.sendgo.model.BrandMessageRequest;
+import io.sendgo.model.Contact;
+
+// 단건 발송 — 채널 친구 대상
+sendgo.brandMessage().send(BrandMessageRequest.builder()
+        .targeting("M")
+        .messageType("FL")
+        .friendTemplateUuid("9cd5460b-6458-4edc-9b11-c26d3013c340")
+        .contact(Contact.builder().contact("01012345678").var1("29,000원").build())
+        .build());
+
+// 동보 발송 — 수신 동의한 전체 채널 친구 (contacts 불필요)
+sendgo.brandMessage().broadcast(BrandMessageRequest.builder()
+        .messageType("FW")
+        .friendTemplateUuid("9cd5460b-6458-4edc-9b11-c26d3013c340")
+        .build());
+
+// 캠페인 조회
+var list = sendgo.brandMessage().campaigns(null, null, 10);
+var one  = sendgo.brandMessage().campaign("1f0a6d0e-6b3b-4f0f-9b2f-2f6f6a1b7c11");
 ```
 
 ---
@@ -294,6 +333,18 @@ try {
 | `baseUrl` | `String` | 선택 | `"https://sendgo.io"` | API 기본 URL |
 
 ---
+
+## 1.1.0 변경 사항
+
+- **`contact(...)` 가 누적된다.** 이전에는 `contacts = List.of(v)` 로 리스트를
+  통째로 교체했기 때문에 `.contact(a).contact(b)` 로 다건을 넣으면 `a` 가 조용히
+  사라졌다. 이제 호출할 때마다 추가된다. 한 번만 호출하던 기존 코드는 동작이 같다.
+  전체를 한 번에 지정하려면 여전히 `contacts(List.of(...))` 를 쓴다.
+- **`sendSms` / `sendLms` / `sendMms` 가 messageType 을 강제한다.** 이전에는
+  세 메서드가 모두 요청을 그대로 넘겼기 때문에 `sendLms(SmsRequest.sms()...)` 가
+  SMS 로 발송됐다. 요청 자체의 타입을 그대로 쓰려면 `send(...)` 를 사용한다.
+- **`Contact` 에 `var6` ~ `var8` 이 추가됐다.** 다른 언어 SDK(Node/Python/.NET/Go/Flutter)와
+  동일한 범위를 지원하도록 맞췄다. 그 이상은 `variable("name", "value")` 를 사용한다.
 
 ## 관련 패키지
 

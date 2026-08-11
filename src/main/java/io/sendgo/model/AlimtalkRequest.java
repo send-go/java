@@ -1,6 +1,7 @@
 package io.sendgo.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.ArrayList;
 import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -34,7 +35,16 @@ public class AlimtalkRequest {
 
         public Builder templateCode(String v)      { templateCode = v; return this; }
         public Builder contacts(List<Contact> v)   { contacts = v; return this; }
-        public Builder contact(Contact v)          { contacts = List.of(v); return this; }
+        /**
+         * 수신자를 하나 추가한다. 여러 번 호출하면 누적된다.
+         * (전체를 한 번에 지정하려면 {@link #contacts(List)} 를 사용한다.)
+         */
+        public Builder contact(Contact v) {
+            if (contacts == null) contacts = new ArrayList<>();
+            else if (!(contacts instanceof ArrayList)) contacts = new ArrayList<>(contacts);
+            contacts.add(v);
+            return this;
+        }
         public Builder scheduleType(String v)      { scheduleType = v; return this; }
         public Builder at(String v)                { at = v; return this; }
         public Builder replaceSms(String v)        { replaceSms = v; return this; }
