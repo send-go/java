@@ -6,11 +6,11 @@
 
     <groupId>io.sendgo</groupId>
     <artifactId>sendgo-java</artifactId>
-    <version>1.2.0</version>
+    <version>1.2.1</version>
     <packaging>jar</packaging>
 
     <name>sendgo-java</name>
-    <description>Sendgo Java SDK — 카카오 알림톡/친구톡, SMS/LMS/MMS 순수 Java 클라이언트</description>
+    <description>Sendgo Java SDK — 카카오 알림톡/브랜드메시지, SMS/LMS/MMS 순수 Java 클라이언트</description>
     <url>https://github.com/send-go/java</url>
 
     <licenses>
