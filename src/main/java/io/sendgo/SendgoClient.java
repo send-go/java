@@ -53,15 +53,20 @@ public class SendgoClient {
     /** 카카오 알림톡 서비스 */
     public AlimtalkService alimtalk() { return alimtalkService; }
 
-    /** 카카오 친구톡 서비스 */
+    /**
+     * 카카오 친구톡 서비스.
+     *
+     * @deprecated 친구톡은 2025-12-31 종료. {@link #brandMessage()} 를 사용한다.
+     */
+    @Deprecated
     public FriendtalkService friendtalk() { return friendtalkService; }
 
     /** 카카오 브랜드메시지 — 친구톡의 후속 채널. v2 전용. */
     public BrandMessageService brandMessage() { return brandMessageService; }
 
-    /** SMS / LMS / MMS 서비스 */
     /** 짧은 URL — 링크 단축과 클릭 반응 분석. v2 전용. */
     public ShortUrlService shortUrl() { return shortUrlService; }
 
+    /** SMS / LMS / MMS 서비스 */
     public SmsService sms() { return smsService; }
 }

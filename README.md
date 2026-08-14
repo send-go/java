@@ -1,6 +1,6 @@
 # sendgo-java
 
-> **Java에서 카카오 알림톡, 친구톡, SMS를 가장 쉽게 발송하는 순수 Java SDK**
+> **Java에서 카카오 알림톡, 브랜드메시지, SMS를 가장 쉽게 발송하는 순수 Java SDK**
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.sendgo/sendgo-java)](https://central.sonatype.com/artifact/io.sendgo/sendgo-java)
 [![Java](https://img.shields.io/badge/Java-17%2B-ED8B00?logo=openjdk)](https://openjdk.org)
@@ -105,6 +105,19 @@ sendgo.alimtalk().send(AlimtalkRequest.builder()
 
 ## 친구톡 사용법
 
+> ⚠️ **Deprecated — 친구톡은 카카오 정책에 따라 2025-12-31 종료되었습니다.**
+> 2026-01-01 부터 친구톡 발송 요청은 카카오 측에서 **브랜드메시지(자유형)** 로 자동 대체 발송됩니다.
+> 호출은 계속 성공하며, 자유 본문 타입(`FT`/`FI`/`FW`)을 개별 수신자에게 보내는 경로는
+> 현재 이것뿐이므로 기존 코드를 당장 바꿀 필요는 없습니다.
+>
+> 다음의 경우에는 **브랜드메시지**를 사용하세요.
+> - 템플릿 기반 리치 타입 (`FL`/`FC`/`FM`/`FP`/`FA`)
+> - 채널 친구가 **아닌** 수신자 (`targeting` = `N` / `I`)
+> - 수신 동의한 전체 채널 친구 동보 (`targeting` = `F`)
+>
+> 메시지 타입은 1:1 대응되며 변환은 서버가 처리합니다 — `FT`→`BT`, `FI`→`BI`, `FW`→`BW`,
+> `FL`→`BL`, `FC`→`BC`, `FM`→`BM`, `FP`→`BP`, `FA`→`BA`.
+
 ```java
 // 텍스트형
 sendgo.friendtalk().send(FriendtalkRequest.builder()
@@ -136,7 +149,7 @@ sendgo.friendtalk().send(FriendtalkRequest.builder()
 - 수신 동의한 **전체 채널 친구 동보** 발송 (`targeting: F`, 수신자 목록 불필요)
 - 리스트·캐러셀·커머스·동영상 등 **템플릿 기반 리치 메시지**
 
-> v2 전용입니다. `FT`/`FI`/`FW`를 채널 친구에게만 보낼 때는 친구톡 API가 더 간단합니다.
+> v2 전용입니다. 자유 본문 타입(`FT`/`FI`/`FW`)을 개별 수신자에게 보낼 때는 여전히 친구톡 API 를 쓰세요 — 이 엔드포인트는 그 조합에 `NOT_A_BRAND_MESSAGE` 를 반환합니다. 친구톡 요청은 카카오 측에서 브랜드메시지(자유형)로 대체 발송됩니다.
 
 ```java
 import io.sendgo.model.BrandMessageRequest;
@@ -391,6 +404,17 @@ sendgo.shortUrl().deactivate(code);   // 리다이렉트만 중지, 통계는 �
 
 `stats` 는 일별 추이(`daily`)와 디바이스(`byDevice`)·유입경로(`byReferer`)·국가(`byCountry`)별
 분해를 반환합니다. 일별 추이는 사전 집계 표에서 읽으므로 클릭이 많아도 응답 시간이 일정합니다.
+
+## 변경 사항
+
+### 1.2.0 (2026-08-14)
+
+- **친구톡 Deprecated 표기** — 친구톡은 카카오 정책에 따라 2025-12-31 종료되었고,
+  2026-01-01 부터 발송 요청이 브랜드메시지(자유형)로 자동 대체 발송됩니다.
+  관련 API 에 각 언어의 표준 deprecation 표기를 달았습니다.
+- 자유 본문 타입(`FT`/`FI`/`FW`)의 개별 발송 경로는 아직 친구톡 API 뿐이라는 점을
+  문서에 명시했습니다 — 브랜드메시지 API 는 그 조합에 `NOT_A_BRAND_MESSAGE` 를 반환합니다.
+- 브랜드메시지 전환 안내와 메시지 타입 1:1 대응표를 README 에 추가했습니다.
 
 ## 라이선스
 
