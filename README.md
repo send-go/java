@@ -405,7 +405,268 @@ sendgo.shortUrl().deactivate(code);   // 리다이렉트만 중지, 통계는 �
 `stats` 는 일별 추이(`daily`)와 디바이스(`byDevice`)·유입경로(`byReferer`)·국가(`byCountry`)별
 분해를 반환합니다. 일별 추이는 사전 집계 표에서 읽으므로 클릭이 많아도 응답 시간이 일정합니다.
 
+## 관리 API — 채널·템플릿·발신번호 등록 (v2 전용)
+
+발송은 처음부터 API였지만 **등록과 심사는 콘솔에서만** 되던 것들이 있었습니다.
+1.3.0 부터 그 작업도 코드로 처리합니다.
+
+| 서비스 | 하는 일 | 계정 |
+| --- | --- | --- |
+| `sendgo.kakaoSenders()` | 카카오 채널 인증·등록·동기화, 브랜드메시지 M/N 신청 | 기업 |
+| `sendgo.noticeTemplates()` | 알림톡 템플릿 CRUD, 검수 요청·취소, 승인 취소, 휴면 해제 | 기업 |
+| `sendgo.brandTemplates()` | 브랜드메시지(구 친구톡) 템플릿 CRUD, 동기화, 가져오기 | 기업 |
+| `sendgo.senderRegistration()` | 발신번호 등록 신청, 중복 확인, 유형 안내 | 개인·기업 |
+| `sendgo.messageTemplates()` | 문자 상용구 템플릿 CRUD | 개인·기업 |
+| `sendgo.kakaoImages()` | 카카오 이미지 업로드 — 템플릿용 URL 발급 | 기업 |
+| `sendgo.rejectedNumbers()` | 수신거부(080) 번호 조회 | 개인·기업 |
+| `sendgo.webhook()` | 이벤트 웹훅 구독 — 심사 결과 수신 | 개인·기업 |
+
+> **sendgo.io 콘솔에 들어올 일이 없습니다.** 고객의 채널·발신번호·템플릿을
+> 여러분 화면만으로 끝까지 처리할 수 있습니다. 휴대폰 발신번호는 콘솔의 PASS
+> 본인인증 대신 **신분증 사본(`identityDocument`)을 받아 sendgo 운영자가 대신
+> 심사**합니다.
+>
+> 사람이 개입하는 지점은 **카카오 채널 인증번호 하나**뿐이고, 그마저도
+> 여러분 화면에서 입력받으면 됩니다 — 카카오가 관리자 휴대폰으로 직접 보내는
+> 확인이라 없앨 수 없습니다.
+>
+> 심사가 붙는 것들은 **비동기**입니다. 등록 호출이 성공했다는 건 "접수됐다"는
+> 뜻이지 "쓸 수 있다"는 뜻이 아닙니다 — 웹훅을 구독해 결과를 받으세요.
+
+### 카카오 채널 등록
+
+```java
+// 1단계 — 카카오가 관리자 휴대폰으로 인증번호를 SMS 발송한다 (응답에 번호는 없다)
+sendgo.kakaoSenders().requestToken("@my-channel", "01012345678");
+
+// 2단계 — 사람이 받은 인증번호로 발신프로필 생성
+Map<String, Object> created = sendgo.kakaoSenders().create(
+        KakaoSenderCreateRequest.builder()
+                .token("123456")
+                .yellowId("@my-channel")
+                .phoneNumber("01012345678")
+                .categoryCode("001001")   // categories() 로 조회
+                .build());
+
+sendgo.kakaoSenders().categories();
+sendgo.kakaoSenders().list();
+sendgo.kakaoSenders().sync();                   // 전체 상태 동기화 (하루 한 번 권장)
+sendgo.kakaoSenders().sync(kakaoSenderKey);     // 단건
+```
+
+채널이 카카오 쪽에서 차단되면 발송이 조용히 실패하기 시작합니다. `sync()` 를
+주기적으로 돌리고 `block: true` 인 채널을 감시하세요.
+
+### 알림톡 템플릿 등록과 검수
+
+```java
+Map<String, Object> created = sendgo.noticeTemplates().create(
+        NoticeTemplateRequest.builder()
+                .kakaoSenderKey(kakaoSenderKey)
+                .templateName("주문 접수 안내")
+                .templateContent("#{name}님, 주문 #{orderNo}이 접수되었습니다.")
+                .templateMessageType("BA")      // BA 기본형 / EX 부가정보형 / AD 채널추가형 / MI 복합형
+                .templateEmphasizeType("NONE")  // NONE / TEXT / ITEM_LIST / IMAGE
+                .categoryCode("001001")
+                // sendgo 자체 정책 게이트 — 카카오 심사와 별개다
+                .messagePurpose("order_delivery")
+                .legalBasis("transaction")
+                .benefitOrigin("none")
+                .expiryType("none")
+                .button(Map.of("name", "주문 조회", "linkType", "WL",
+                               "linkMo", "https://example.com/orders"))
+                .build());
+
+String templateCode = ((Map<?, ?>) ((Map<?, ?>) created.get("data")).get("template"))
+        .get("templateCode").toString();
+
+// 검수 요청 — 증빙이 필요하면 파일도 붙인다 (첨부가 있으면 comment 필수)
+sendgo.noticeTemplates().requestInspection(templateCode);
+sendgo.noticeTemplates().requestInspection(templateCode, "주문 확인 화면 첨부",
+        List.of(MultipartFile.of("attachment", Path.of("proof.png"), "image/png")));
+
+// 결과는 비동기다. 웹훅이 없으므로 폴링한다
+Map<String, Object> synced = sendgo.noticeTemplates().sync(templateCode);
+// data.template.inspectionStatus — REG → REQ → APR / REJ
+```
+
+`optInReviewConfirmed` · `ctaClearConfirmed` · `policyConfirmed` 는 빌더 기본값이
+`true` 지만, **내용을 실제로 검토한 뒤에** 그대로 두어야 합니다 — 이 값은 법적
+확인의 기록입니다.
+
+정책 필드 조합이 본문과 어긋나면 저장 단계에서 `POLICY_VALIDATION_FAILED` 로
+막힙니다. 여기서 걸리는 문안은 **카카오 심사에서도 거의 반려**되므로,
+며칠 기다렸다 반려당하는 것보다 즉시 아는 편이 낫습니다.
+
+```java
+sendgo.noticeTemplates().list(kakaoSenderKey, "APR", null, null);
+sendgo.noticeTemplates().show(templateCode);
+sendgo.noticeTemplates().update(templateCode, request);   // 본문이 바뀌면 재검수 필요
+sendgo.noticeTemplates().cancelInspection(templateCode);
+sendgo.noticeTemplates().cancelApproval(templateCode);
+sendgo.noticeTemplates().release(templateCode);           // 휴면 해제
+sendgo.noticeTemplates().delete(templateCode);            // sendgo 목록에서만 삭제된다
+sendgo.noticeTemplates().categories();
+```
+
+이미지 템플릿은 multipart 로 나갑니다.
+
+```java
+sendgo.noticeTemplates().createWithImage(
+        request,
+        MultipartFile.of("image", Path.of("banner.jpg"), "image/jpeg"));
+```
+
+> **삭제 동작이 채널마다 다릅니다.** 알림톡 템플릿은 카카오에 삭제 API 가 없어
+> sendgo 목록에서만 빠지고 동기화하면 되살아납니다. 브랜드메시지 템플릿은
+> 카카오 쪽에서도 실제로 삭제됩니다.
+
+### 브랜드메시지 템플릿
+
+```java
+sendgo.brandTemplates().create(BrandTemplateRequest.builder()
+        .kakaoSenderKey(kakaoSenderKey)
+        .templateName("여름 세일 안내")
+        .templateType("FI")   // FT/FI/FW/FL/FC/FM/FP/FA — 서버가 chatBubbleType 으로 변환
+        .templateContent("여름 세일이 시작되었습니다.")
+        .imageUrl("https://mud-kage.kakao.com/....jpg")
+        .build());
+
+sendgo.brandTemplates().list(kakaoSenderKey, null, null);
+sendgo.brandTemplates().sync(templateCode);
+sendgo.brandTemplates().importFromSender(kakaoSenderKey);  // 카카오에 있는 템플릿 가져오기
+sendgo.brandTemplates().delete(templateCode);              // 카카오에서도 삭제된다
+```
+
+응답의 `containsVariables` 가 true 면 동보 발송(`targeting=F`)에는 쓸 수 없습니다.
+
+### 발신번호 등록 신청
+
+```java
+// 계정 종류에 맞는 유형과 유형별 필수 서류
+sendgo.senderRegistration().numberTypes();
+
+// 형식·중복 미리 확인
+Map<String, Object> check = sendgo.senderRegistration().validate("02-1234-5678", "team_main");
+
+Map<String, Object> created = sendgo.senderRegistration().create(
+        SenderRegistrationRequest.builder()
+                .senderAlias("고객센터 대표번호")
+                .senderNumberType("team_main")   // personal_other / team_main / team_other_company
+                .phoneE164("02-1234-5678")
+                // check 의 duplicationReasonRequired 가 true 면 필수
+                // .duplicationReason("부서별 분리 운영")
+                .build(),
+        List.of(MultipartFile.of("csuCertificate", Path.of("csu.pdf"), "application/pdf")));
+
+// data.sender.status == "PENDING" — 운영자 승인 후 SUCCESS
+
+sendgo.senderRegistration().list();
+sendgo.senderRegistration().update(senderKey, "새 이름");
+sendgo.senderRegistration().delete(senderKey);
+```
+
+**휴대폰 유형도 API 로 접수할 수 있습니다.** 콘솔의 PASS 본인인증 대신
+신분증 사본(`identityDocument`)을 첨부하면 sendgo 운영자가 직접 확인합니다.
+이 경로로 접수된 건은 응답의 `identityVerificationMethod` 가 `document` 이고
+**자동 승인되지 않습니다** — 운영자 확인 전까지 `PENDING` 입니다.
+
+유형별 필수 서류는 `numberTypes()` 응답의 `requiredDocuments` 로 확인하세요.
+반려되면 `rejectionReason` 에 사유가 담깁니다.
+
+### 문자 템플릿
+
+```java
+sendgo.messageTemplates().create(MessageTemplateRequest.builder()
+        .messageTranType("LMS")
+        .messageTranSubject("주문 안내")   // LMS·MMS 는 필수
+        .messageTranMsg("주문이 접수되었습니다.")
+        .build());
+
+sendgo.messageTemplates().list("LMS", null, null);
+sendgo.messageTemplates().update(templateKey, request);
+sendgo.messageTemplates().delete(templateKey);
+```
+
+### 이벤트 웹훅 — 심사 결과를 밀어 받기
+
+```java
+Map<String, Object> created = sendgo.webhook().subscribe(
+        WebhookSubscriptionRequest.builder()
+                .url("https://reseller.example.com/hooks/sendgo")
+                .build());
+
+// 시크릿은 이 응답에서 한 번만 나온다. 즉시 저장한다.
+
+sendgo.webhook().show();          // 구독 설정 + 마지막 전송 결과
+sendgo.webhook().test();          // 배선 확인
+sendgo.webhook().unsubscribe();
+```
+
+받는 쪽에서는 **원본 바이트**로 서명을 검증합니다.
+
+```java
+@PostMapping("/hooks/sendgo")
+ResponseEntity<Void> receive(@RequestBody byte[] rawBody,
+                             @RequestHeader("X-Sendgo-Signature") String signature) {
+    if (!WebhookService.verifySignature(rawBody, signature, secret)) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    // 처리는 비동기로. 여기서 오래 끌면 재시도가 쌓인다.
+    events.publish(rawBody);
+
+    return ResponseEntity.noContent().build();
+}
+```
+
+이벤트 목록은 `WebhookSubscriptionRequest.EVENTS` 로 확인할 수 있습니다.
+
+### 카카오 이미지 업로드
+
+브랜드메시지 템플릿의 `imageUrl` 은 **카카오가 호스팅하는 URL** 이어야 합니다.
+
+```java
+Map<String, Object> uploaded = sendgo.kakaoImages().upload("default",
+        MultipartFile.of("image", Path.of("banner.jpg"), "image/jpeg"));
+
+sendgo.kakaoImages().uploadMany("carousel_feed", slides);
+sendgo.kakaoImages().types();   // 유형별 필드·최대 개수
+```
+
+### 수신거부(080) 동기화
+
+```java
+// 증분만 가져간다. 하루 한 번이면 충분하다.
+sendgo.rejectedNumbers().list("2026-09-01", null, 500);
+```
+
+---
+
 ## 변경 사항
+
+### 1.3.0 (2026-09-11)
+
+- **관리 API 추가** — 콘솔에서만 되던 등록·심사를 코드로 처리합니다.
+  `sendgo.kakaoSenders()`(채널 인증·등록·동기화, 브랜드메시지 M/N 신청),
+  `sendgo.noticeTemplates()`(알림톡 템플릿 CRUD·검수 요청·승인 취소·휴면 해제),
+  `sendgo.brandTemplates()`(브랜드메시지 템플릿 CRUD·동기화·가져오기),
+  `sendgo.senderRegistration()`(발신번호 등록 신청·중복 확인·유형 안내),
+  `sendgo.messageTemplates()`(문자 상용구 템플릿 CRUD).
+- 요청 모델 추가 — `KakaoSenderCreateRequest`, `NoticeTemplateRequest`,
+  `BrandTemplateRequest`, `SenderRegistrationRequest`, `MessageTemplateRequest`,
+  그리고 첨부용 `MultipartFile`.
+- `SendgoHttpClient` 에 `put`·`patch`·`postMultipart` 를 추가했습니다.
+  서류 첨부와 이미지 템플릿은 JSON 으로 보낼 수 없습니다.
+- **휴대폰 발신번호도 API 로 접수됩니다.** 콘솔의 PASS 본인인증 대신
+  `identityDocument`(신분증 사본)를 첨부하면 sendgo 운영자가 확인합니다.
+  이 경로는 자동 승인되지 않고 항상 `PENDING` 으로 시작합니다.
+- **이벤트 웹훅** 추가 — 발신번호 승인, 알림톡 검수 결과, 채널 차단,
+  브랜드메시지 타겟팅 결과를 구독해 받습니다. 서명은 받은 원본 바이트로
+  검증합니다(SDK 에 검증 헬퍼 포함).
+- **카카오 이미지 업로드** 추가 — 브랜드메시지 템플릿의 `imageUrl` 은 카카오가
+  호스팅하는 URL 이어야 하는데, 그 URL 을 얻는 길이 콘솔에만 있었습니다.
+- **수신거부(080) 조회** 추가 — 자기 DB 의 수신 상태를 맞출 수 있습니다.
 
 ### 1.2.1 (2026-08-14)
 
