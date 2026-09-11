@@ -120,8 +120,8 @@ public class DocExamplesCompileTest {
     /**
      * 1.3.0 관리 API — 등록 · 심사.
      *
-     * <p>카카오 채널 인증번호와 휴대폰 발신번호 본인인증은 사람이 개입해야
-     * 하므로 여기서도 트리거까지만 쓴다.
+     * <p>인증번호는 채널 관리자 휴대폰으로 가므로 여기서는 발송 트리거까지만
+     * 쓴다 — 코드 제출은 여러분 화면에서 받아 create() 로 넘긴다.
      */
     void managementApi(SendgoClient sendgo) throws IOException {
         // --- 카카오 채널 등록 (2단계) ---
