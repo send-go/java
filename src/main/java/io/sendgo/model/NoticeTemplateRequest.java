@@ -31,6 +31,9 @@ import java.util.Map;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class NoticeTemplateRequest {
+    private final String folderUuid;
+    /** 등록 시 폴더 지정. 이동은 templateFolders().assign을 사용합니다. */
+    public String getFolderUuid() { return folderUuid; }
     private final String kakaoSenderKey;
     private final String templateName;
     private final String templateContent;
@@ -59,6 +62,7 @@ public class NoticeTemplateRequest {
     private final boolean policyConfirmed;
 
     private NoticeTemplateRequest(Builder b) {
+        this.folderUuid = b.folderUuid;
         this.kakaoSenderKey        = b.kakaoSenderKey;
         this.templateName          = b.templateName;
         this.templateContent       = b.templateContent;
@@ -113,6 +117,8 @@ public class NoticeTemplateRequest {
     public static Builder builder() { return new Builder(); }
 
     public static class Builder {
+        private String folderUuid;
+        public Builder folderUuid(String value) { folderUuid = value; return this; }
         private String kakaoSenderKey;
         private String templateName;
         private String templateContent;

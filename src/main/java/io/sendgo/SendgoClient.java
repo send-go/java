@@ -33,6 +33,7 @@ public class SendgoClient {
 
     // 관리 API (v2 전용) — 콘솔에서만 되던 등록·심사.
     private final KakaoSenderService        kakaoSenderService;
+    private final TemplateFolderService templateFolderService;
     private final NoticeTemplateService     noticeTemplateService;
     private final BrandTemplateService      brandTemplateService;
     private final SenderRegistrationService senderRegistrationService;
@@ -57,6 +58,7 @@ public class SendgoClient {
         this.smsService        = new SmsService(http, config);
 
         this.kakaoSenderService        = new KakaoSenderService(http, config);
+        this.templateFolderService = new TemplateFolderService(http, config);
         this.noticeTemplateService     = new NoticeTemplateService(http, config);
         this.brandTemplateService      = new BrandTemplateService(http, config);
         this.senderRegistrationService = new SenderRegistrationService(http, config);
@@ -101,6 +103,9 @@ public class SendgoClient {
 
     /** 카카오 발신프로필(채널) 등록·동기화. v2 전용, 기업 계정 전용. */
     public KakaoSenderService kakaoSenders() { return kakaoSenderService; }
+
+    /** 템플릿 공용 폴더. v2 전용, 기업 계정 전용. */
+    public TemplateFolderService templateFolders() { return templateFolderService; }
 
     /** 알림톡 템플릿 등록·수정·검수 요청. v2 전용, 기업 계정 전용. */
     public NoticeTemplateService noticeTemplates() { return noticeTemplateService; }

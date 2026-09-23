@@ -15,6 +15,9 @@ import java.util.Map;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class BrandTemplateRequest {
+    private final String folderUuid;
+    /** 등록 시 폴더 지정. 이동은 templateFolders().assign을 사용합니다. */
+    public String getFolderUuid() { return folderUuid; }
     private final String kakaoSenderKey;
     private final String templateName;
     private final String templateType;
@@ -36,6 +39,7 @@ public class BrandTemplateRequest {
     private final List<Map<String, Object>> subWideItemList;
 
     private BrandTemplateRequest(Builder b) {
+        this.folderUuid = b.folderUuid;
         this.kakaoSenderKey    = b.kakaoSenderKey;
         this.templateName      = b.templateName;
         this.templateType      = b.templateType;
@@ -84,6 +88,8 @@ public class BrandTemplateRequest {
     public static Builder builder() { return new Builder(); }
 
     public static class Builder {
+        private String folderUuid;
+        public Builder folderUuid(String value) { folderUuid = value; return this; }
         private String kakaoSenderKey;
         private String templateName;
         private String templateType = "FT";

@@ -46,7 +46,13 @@ public class NoticeTemplateService {
 
     /** 목록 조회. null 인 조건은 적용하지 않는다. */
     public Map<String, Object> list(String kakaoSenderKey, String inspectionStatus, String search, Integer count) {
+        return list(kakaoSenderKey, inspectionStatus, search, count, null);
+    }
+
+    /** 폴더 필터. none이면 미분류 템플릿만 조회합니다. */
+    public Map<String, Object> list(String kakaoSenderKey, String inspectionStatus, String search, Integer count, String folderUuid) {
         List<String> query = new ArrayList<>();
+        if (folderUuid != null) query.add("folderUuid=" + encode(folderUuid));
         if (kakaoSenderKey != null)   query.add("kakaoSenderKey=" + encode(kakaoSenderKey));
         if (inspectionStatus != null) query.add("inspectionStatus=" + encode(inspectionStatus));
         if (search != null)           query.add("search=" + encode(search));

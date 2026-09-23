@@ -32,7 +32,13 @@ public class BrandTemplateService {
 
     /** 목록 조회. */
     public Map<String, Object> list(String kakaoSenderKey, String search, Integer count) {
+        return list(kakaoSenderKey, search, count, null);
+    }
+
+    /** 폴더 필터. none이면 미분류 템플릿만 조회합니다. */
+    public Map<String, Object> list(String kakaoSenderKey, String search, Integer count, String folderUuid) {
         List<String> query = new ArrayList<>();
+        if (folderUuid != null) query.add("folderUuid=" + encode(folderUuid));
         if (kakaoSenderKey != null) query.add("kakaoSenderKey=" + encode(kakaoSenderKey));
         if (search != null)         query.add("search=" + encode(search));
         if (count != null)          query.add("count=" + count);
